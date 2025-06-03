@@ -1,328 +1,350 @@
+# language: py
 # AI-Generated Code Header
-# **Intent:** Main application to demonstrate kiwi data loading and analysis
-# **Optimization:** Efficient data processing with visualization capabilities
-# **Safety:** Comprehensive error handling and data validation
+# **Intent:** [Simplified main coordinator script that loads NIR spectroscopic data and runs ML models with graceful dependency handling. Focuses on core models (PLS, Random Forest, SVR) that are most reliable for spectroscopic data.]
+# **Optimization:** [Efficiently handles missing dependencies by only importing and running models that are available. Provides comprehensive evaluation while being robust to installation issues.]
+# **Safety:** [Includes comprehensive error handling for missing dependencies, graceful degradation when libraries are unavailable, and robust data validation.]
 
-import sys
-import matplotlib.pyplot as plt
-import seaborn as sns
 import pandas as pd
 import numpy as np
-from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+import json
+import time
+from datetime import datetime
+import warnings
+warnings.filterwarnings('ignore')
 
-# Import our custom data loader
-from loaddata import KiwiDataLoader, load_kiwi_data, get_data_info
+# Import data loader
+from kiwi_data_loader import load_kiwi_data
 
-# Configure matplotlib for better plots
-plt.style.use('seaborn-v0_8')
-sns.set_palette("husl")
+# Try to import models individually with graceful error handling
+available_models = {}
 
-class KiwiDataAnalyzer:
-    """
-    Main class for analyzing kiwi dataset with visualization and statistical analysis.
-    """
+# Always available models (using sklearn)
+try:
+    from sklearn.cross_decomposition import PLSRegression
+    from sklearn.ensemble import RandomForestRegressor
+    from sklearn.svm import SVR
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.model_selection import cross_val_score, KFold
+    from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
     
-    def __init__(self, data_path: str = "../src/data"):
-        """
-        Initialize the analyzer with data path.
-        
-        Args:
-            data_path (str): Path to the data directory
-        """
-        self.data_path = data_path
-        self.loader = KiwiDataLoader(data_path)
-        self.data: Dict[int, pd.DataFrame] = {}
-        self.combined_data: Optional[pd.DataFrame] = None
+    SKLEARN_AVAILABLE = True
+    print("✅ Scikit-learn available")
+except ImportError as e:
+    SKLEARN_AVAILABLE = False
+    print(f"❌ Scikit-learn not available: {e}")
+
+# Try XGBoost
+try:
+    import xgboost as xgb
+    XGBOOST_AVAILABLE = True
+    print("✅ XGBoost available")
+except ImportError as e:
+    XGBOOST_AVAILABLE = False
+    print(f"⚠️ XGBoost not available: {e}")
+
+# Try TensorFlow
+try:
+    import tensorflow as tf
+    TENSORFLOW_AVAILABLE = True
+    print("✅ TensorFlow available")
+except ImportError as e:
+    TENSORFLOW_AVAILABLE = False
+    print(f"⚠️ TensorFlow not available: {e}")
+
+class SimpleModel:
+    """Simple wrapper for sklearn models with consistent interface."""
     
-    def load_data(self, file_numbers: Optional[List[int]] = None) -> None:
-        """
-        Load kiwi data files.
-        
-        Args:
-            file_numbers (Optional[List[int]]): Specific file numbers to load
-        """
-        print("Loading kiwi data files...")
-        print("=" * 50)
-        
+    def __init__(self, model, model_name, random_state=42):
+        self.model = model
+        self.model_name = model_name
+        self.random_state = random_state
+        self.scaler = StandardScaler()
+        self.is_fitted = False
+    
+    def fit(self, X, y):
+        """Fit the model."""
+        X_scaled = self.scaler.fit_transform(X)
+        self.model.fit(X_scaled, y)
+        self.is_fitted = True
+        return self
+    
+    def predict(self, X):
+        """Make predictions."""
+        X_scaled = self.scaler.transform(X)
+        return self.model.predict(X_scaled)
+    
+    def evaluate_with_cv(self, X, y, cv_folds=5):
+        """Evaluate with cross-validation."""
         try:
-            self.data = self.loader.load_kiwi_files_by_number(file_numbers)
+            cv = KFold(n_splits=cv_folds, shuffle=True, random_state=self.random_state)
             
-            if not self.data:
-                print("No data files were loaded successfully.")
-                return
+            fold_scores = {'rmse': [], 'mae': [], 'r2': []}
+            all_predictions = []
+            all_true_values = []
             
-            print(f"\nSuccessfully loaded {len(self.data)} files:")
-            for num, df in self.data.items():
-                print(f"  kiwi-{num}.csv: {df.shape[0]} rows × {df.shape[1]} columns")
+            for fold, (train_idx, val_idx) in enumerate(cv.split(X, y)):
+                X_train, X_val = X[train_idx], X[val_idx]
+                y_train, y_val = y[train_idx], y[val_idx]
                 
+                # Create fresh model and scaler for this fold
+                temp_model = type(self.model)(**self.model.get_params())
+                temp_scaler = StandardScaler()
+                
+                # Fit and predict
+                X_train_scaled = temp_scaler.fit_transform(X_train)
+                X_val_scaled = temp_scaler.transform(X_val)
+                
+                temp_model.fit(X_train_scaled, y_train)
+                y_pred = temp_model.predict(X_val_scaled)
+                
+                # Calculate metrics
+                rmse = np.sqrt(mean_squared_error(y_val, y_pred))
+                mae = mean_absolute_error(y_val, y_pred)
+                r2 = r2_score(y_val, y_pred)
+                
+                fold_scores['rmse'].append(rmse)
+                fold_scores['mae'].append(mae)
+                fold_scores['r2'].append(r2)
+                
+                all_predictions.extend(y_pred)
+                all_true_values.extend(y_val)
+            
+            # Calculate results
+            results = {
+                f'{self.model_name}_cv_results': {
+                    'rmse_mean': np.mean(fold_scores['rmse']),
+                    'rmse_std': np.std(fold_scores['rmse']),
+                    'mae_mean': np.mean(fold_scores['mae']),
+                    'mae_std': np.std(fold_scores['mae']),
+                    'r2_mean': np.mean(fold_scores['r2']),
+                    'r2_std': np.std(fold_scores['r2']),
+                    'cv_folds': cv_folds,
+                    'n_samples': len(y)
+                },
+                f'{self.model_name}_overall': {
+                    'rmse': np.sqrt(mean_squared_error(all_true_values, all_predictions)),
+                    'mae': mean_absolute_error(all_true_values, all_predictions),
+                    'r2': r2_score(all_true_values, all_predictions)
+                }
+            }
+            
+            return results
+            
         except Exception as e:
-            print(f"Error loading data: {str(e)}")
-            sys.exit(1)
-    
-    def analyze_data_structure(self) -> None:
-        """Analyze and display the structure of loaded data."""
-        if not self.data:
-            print("No data loaded. Please load data first.")
-            return
-        
-        print("\nData Structure Analysis")
-        print("=" * 50)
-        
-        for num, df in self.data.items():
-            print(f"\nkiwi-{num}.csv Analysis:")
-            print(f"  Shape: {df.shape}")
-            print(f"  Columns: {list(df.columns)}")
-            print(f"  Data types: {df.dtypes.to_dict()}")
-            print(f"  Missing values: {df.isnull().sum().sum()}")
-            
-            if 'frequency' in df.columns:
-                freq_col = df['frequency']
-                print(f"  Frequency range: {freq_col.min():.2f} - {freq_col.max():.2f}")
-                print(f"  Frequency points: {len(freq_col)}")
-            
-            # Show basic statistics for numerical columns
-            numeric_cols = df.select_dtypes(include=[np.number]).columns
-            if len(numeric_cols) > 1:  # More than just frequency
-                measurement_cols = [col for col in numeric_cols if col != 'frequency']
-                if measurement_cols:
-                    print(f"  Measurement columns: {len(measurement_cols)}")
-                    print(f"  Value range: {df[measurement_cols].min().min():.4f} - {df[measurement_cols].max().max():.4f}")
-    
-    def plot_frequency_response(self, file_numbers: Optional[List[int]] = None, 
-                              max_measurements: int = 5) -> None:
-        """
-        Plot frequency response for selected files.
-        
-        Args:
-            file_numbers (Optional[List[int]]): Specific files to plot
-            max_measurements (int): Maximum number of measurement columns to plot per file
-        """
-        if not self.data:
-            print("No data loaded for plotting.")
-            return
-        
-        files_to_plot = file_numbers if file_numbers else list(self.data.keys())
-        files_to_plot = [f for f in files_to_plot if f in self.data]
-        
-        if not files_to_plot:
-            print("No valid files specified for plotting.")
-            return
-        
-        print(f"\nPlotting frequency response for files: {files_to_plot}")
-        
-        # Create subplots
-        n_files = len(files_to_plot)
-        fig, axes = plt.subplots(n_files, 1, figsize=(12, 4 * n_files))
-        if n_files == 1:
-            axes = [axes]
-        
-        for idx, file_num in enumerate(files_to_plot):
-            df = self.data[file_num]
-            ax = axes[idx]
-            
-            if 'frequency' not in df.columns:
-                ax.text(0.5, 0.5, f"No frequency column in kiwi-{file_num}.csv", 
-                       ha='center', va='center', transform=ax.transAxes)
-                continue
-            
-            # Get measurement columns
-            measurement_cols = [col for col in df.columns if col.startswith('measurement_')]
-            measurement_cols = measurement_cols[:max_measurements]  # Limit number of lines
-            
-            # Plot each measurement
-            for col in measurement_cols:
-                ax.plot(df['frequency'], df[col], label=col, alpha=0.7, linewidth=1)
-            
-            ax.set_xlabel('Frequency')
-            ax.set_ylabel('Measurement Value')
-            ax.set_title(f'Frequency Response - kiwi-{file_num}.csv')
-            ax.grid(True, alpha=0.3)
-            
-            if len(measurement_cols) <= 10:  # Only show legend if not too many lines
-                ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-        
-        plt.tight_layout()
-        plt.show()
-    
-    def plot_data_overview(self) -> None:
-        """Create an overview plot showing all loaded data."""
-        if not self.data:
-            print("No data loaded for overview plot.")
-            return
-        
-        print("\nCreating data overview plot...")
-        
-        fig, axes = plt.subplots(2, 2, figsize=(15, 10))
-        
-        # Plot 1: Number of data points per file
-        file_nums = list(self.data.keys())
-        data_points = [df.shape[0] for df in self.data.values()]
-        
-        axes[0, 0].bar(file_nums, data_points, color='skyblue', alpha=0.7)
-        axes[0, 0].set_xlabel('File Number')
-        axes[0, 0].set_ylabel('Number of Data Points')
-        axes[0, 0].set_title('Data Points per File')
-        axes[0, 0].grid(True, alpha=0.3)
-        
-        # Plot 2: Number of measurement columns per file
-        measurement_counts = []
-        for df in self.data.values():
-            measurement_cols = [col for col in df.columns if col.startswith('measurement_')]
-            measurement_counts.append(len(measurement_cols))
-        
-        axes[0, 1].bar(file_nums, measurement_counts, color='lightcoral', alpha=0.7)
-        axes[0, 1].set_xlabel('File Number')
-        axes[0, 1].set_ylabel('Number of Measurements')
-        axes[0, 1].set_title('Measurement Columns per File')
-        axes[0, 1].grid(True, alpha=0.3)
-        
-        # Plot 3: Frequency range comparison
-        if all('frequency' in df.columns for df in self.data.values()):
-            freq_ranges = []
-            for num, df in self.data.items():
-                freq_min = df['frequency'].min()
-                freq_max = df['frequency'].max()
-                axes[1, 0].barh(f'kiwi-{num}', freq_max - freq_min, 
-                               left=freq_min, alpha=0.7)
-                freq_ranges.append((freq_min, freq_max))
-            
-            axes[1, 0].set_xlabel('Frequency')
-            axes[1, 0].set_ylabel('File')
-            axes[1, 0].set_title('Frequency Range per File')
-            axes[1, 0].grid(True, alpha=0.3)
-        else:
-            axes[1, 0].text(0.5, 0.5, 'Frequency data not available', 
-                           ha='center', va='center', transform=axes[1, 0].transAxes)
-        
-        # Plot 4: Value distribution across all files
-        all_values = []
-        for df in self.data.values():
-            measurement_cols = [col for col in df.columns if col.startswith('measurement_')]
-            if measurement_cols:
-                values = df[measurement_cols].values.flatten()
-                all_values.extend(values[~np.isnan(values)])  # Remove NaN values
-        
-        if all_values:
-            axes[1, 1].hist(all_values, bins=50, alpha=0.7, color='lightgreen', edgecolor='black')
-            axes[1, 1].set_xlabel('Measurement Value')
-            axes[1, 1].set_ylabel('Frequency')
-            axes[1, 1].set_title('Distribution of All Measurement Values')
-            axes[1, 1].grid(True, alpha=0.3)
-        else:
-            axes[1, 1].text(0.5, 0.5, 'No measurement data available', 
-                           ha='center', va='center', transform=axes[1, 1].transAxes)
-        
-        plt.tight_layout()
-        plt.show()
-    
-    def generate_summary_report(self) -> None:
-        """Generate a comprehensive summary report of the loaded data."""
-        if not self.data:
-            print("No data loaded for summary report.")
-            return
-        
-        print("\nKiwi Data Summary Report")
-        print("=" * 60)
-        
-        total_files = len(self.data)
-        total_rows = sum(df.shape[0] for df in self.data.values())
-        
-        print(f"Dataset Overview:")
-        print(f"  Total files loaded: {total_files}")
-        print(f"  Total data points: {total_rows:,}")
-        
-        # File-by-file analysis
-        print(f"\nDetailed File Analysis:")
-        print("-" * 60)
-        
-        for num in sorted(self.data.keys()):
-            df = self.data[num]
-            print(f"\nkiwi-{num}.csv:")
-            print(f"  Dimensions: {df.shape[0]:,} rows × {df.shape[1]} columns")
-            
-            if 'frequency' in df.columns:
-                freq_col = df['frequency']
-                print(f"  Frequency range: {freq_col.min():.3f} to {freq_col.max():.3f}")
-                print(f"  Frequency step: ~{(freq_col.max() - freq_col.min()) / len(freq_col):.6f}")
-            
-            measurement_cols = [col for col in df.columns if col.startswith('measurement_')]
-            if measurement_cols:
-                print(f"  Measurement columns: {len(measurement_cols)}")
-                
-                # Calculate statistics for measurements
-                measurement_data = df[measurement_cols]
-                print(f"  Value statistics:")
-                print(f"    Min: {measurement_data.min().min():.6f}")
-                print(f"    Max: {measurement_data.max().max():.6f}")
-                print(f"    Mean: {measurement_data.mean().mean():.6f}")
-                print(f"    Std: {measurement_data.std().mean():.6f}")
-                
-                # Check for missing values
-                missing_count = measurement_data.isnull().sum().sum()
-                if missing_count > 0:
-                    print(f"    Missing values: {missing_count}")
-        
-        # Overall statistics
-        all_measurement_data = []
-        for df in self.data.values():
-            measurement_cols = [col for col in df.columns if col.startswith('measurement_')]
-            if measurement_cols:
-                all_measurement_data.append(df[measurement_cols])
-        
-        if all_measurement_data:
-            combined_measurements = pd.concat(all_measurement_data, ignore_index=True)
-            print(f"\nOverall Dataset Statistics:")
-            print("-" * 30)
-            print(f"  Total measurement points: {combined_measurements.size:,}")
-            print(f"  Global min value: {combined_measurements.min().min():.6f}")
-            print(f"  Global max value: {combined_measurements.max().max():.6f}")
-            print(f"  Global mean: {combined_measurements.mean().mean():.6f}")
-            print(f"  Global std: {combined_measurements.std().mean():.6f}")
+            return {f'{self.model_name}_error': str(e)}
 
+def prepare_data():
+    """Load and prepare the NIR spectroscopic data."""
+    print("=== Loading Kiwi NIR Data ===")
+    
+    df = load_kiwi_data(data_directory="../src/data")
+    
+    if df.empty:
+        raise ValueError("No data loaded. Please check your data files.")
+    
+    print(f"Data loaded successfully: {df.shape[0]} samples, {df.shape[1]} features")
+    
+    # Find target column
+    target_candidates = ['Unnamed: 0', 'sweetness', 'target', 'y']
+    target_col = None
+    
+    for col in target_candidates:
+        if col in df.columns:
+            target_col = col
+            break
+    
+    if target_col is None:
+        target_col = df.columns[0]
+        print(f"Warning: No clear target column found. Using '{target_col}' as target.")
+    
+    # Extract features and target
+    y = df[target_col].values
+    X = df.drop(columns=[target_col]).values
+    feature_names = df.drop(columns=[target_col]).columns.tolist()
+    
+    print(f"Target variable: {target_col}")
+    print(f"Number of wavelength features: {X.shape[1]}")
+    print(f"Target statistics - Mean: {np.mean(y):.3f}, Std: {np.std(y):.3f}")
+    
+    return X, y, feature_names
+
+def create_models():
+    """Create available models based on installed dependencies."""
+    models = {}
+    
+    if SKLEARN_AVAILABLE:
+        # PLS Regression - Best for NIR spectroscopic data
+        models['PLS_Regression'] = SimpleModel(
+            PLSRegression(n_components=10, scale=False),
+            'PLS_Regression'
+        )
+        
+        # Random Forest - Good for non-linear relationships
+        models['Random_Forest'] = SimpleModel(
+            RandomForestRegressor(n_estimators=100, random_state=42, n_jobs=-1),
+            'Random_Forest'
+        )
+        
+        # Support Vector Regression
+        models['SVR'] = SimpleModel(
+            SVR(kernel='rbf', C=1.0, gamma='scale'),
+            'SVR'
+        )
+    
+    if XGBOOST_AVAILABLE:
+        models['XGBoost'] = SimpleModel(
+            xgb.XGBRegressor(n_estimators=100, random_state=42, n_jobs=-1),
+            'XGBoost'
+        )
+    
+    return models
+
+def run_model_evaluation(model, model_name, X, y, cv_folds=5):
+    """Run evaluation for a single model."""
+    print(f"\n=== Evaluating {model_name} ===")
+    start_time = time.time()
+    
+    try:
+        results = model.evaluate_with_cv(X, y, cv_folds=cv_folds)
+        end_time = time.time()
+        results['training_time_seconds'] = end_time - start_time
+        
+        print(f"{model_name} evaluation completed in {end_time - start_time:.2f} seconds")
+        return results
+        
+    except Exception as e:
+        print(f"Error evaluating {model_name}: {e}")
+        return {f'{model_name}_error': str(e), 'training_time_seconds': 0}
+
+def compare_models(all_results):
+    """Compare all model results."""
+    print("\n=== Model Comparison Summary ===")
+    
+    comparison_data = []
+    
+    for model_name, results in all_results.items():
+        if 'error' in str(results):
+            print(f"{model_name}: FAILED - {results}")
+            continue
+        
+        cv_key = f'{model_name}_cv_results'
+        overall_key = f'{model_name}_overall'
+        
+        if cv_key in results and overall_key in results:
+            cv_results = results[cv_key]
+            overall_results = results[overall_key]
+            
+            model_summary = {
+                'model': model_name,
+                'rmse_mean': cv_results['rmse_mean'],
+                'rmse_std': cv_results['rmse_std'],
+                'mae_mean': cv_results['mae_mean'],
+                'mae_std': cv_results['mae_std'],
+                'r2_mean': cv_results['r2_mean'],
+                'r2_std': cv_results['r2_std'],
+                'overall_rmse': overall_results['rmse'],
+                'overall_mae': overall_results['mae'],
+                'overall_r2': overall_results['r2'],
+                'training_time': results.get('training_time_seconds', 0)
+            }
+            
+            comparison_data.append(model_summary)
+    
+    if comparison_data:
+        comparison_df = pd.DataFrame(comparison_data)
+        comparison_df = comparison_df.sort_values(['r2_mean', 'rmse_mean'], ascending=[False, True])
+        
+        print("\nModel Performance Ranking (by R² score):")
+        print("=" * 80)
+        
+        for idx, row in comparison_df.iterrows():
+            print(f"{row['model']:15} | R²: {row['r2_mean']:.4f}±{row['r2_std']:.4f} | "
+                  f"RMSE: {row['rmse_mean']:.4f}±{row['rmse_std']:.4f} | "
+                  f"MAE: {row['mae_mean']:.4f}±{row['mae_std']:.4f} | "
+                  f"Time: {row['training_time']:.1f}s")
+        
+        best_model = comparison_df.iloc[0]
+        print(f"\n🏆 Best Model: {best_model['model']} (R² = {best_model['r2_mean']:.4f})")
+        
+        return comparison_df.to_dict('records')
+    else:
+        print("No successful model evaluations to compare.")
+        return []
+
+def save_results(all_results, comparison_summary, output_file='kiwi_nir_results.json'):
+    """Save results to JSON file."""
+    final_results = {
+        'timestamp': datetime.now().isoformat(),
+        'data_info': {
+            'description': 'NIR spectroscopic data for kiwi sweetness prediction',
+            'features': 'Near-infrared reflectance values at various wavelengths',
+            'target': 'Kiwi sweetness values'
+        },
+        'available_libraries': {
+            'sklearn': SKLEARN_AVAILABLE,
+            'xgboost': XGBOOST_AVAILABLE,
+            'tensorflow': TENSORFLOW_AVAILABLE
+        },
+        'individual_model_results': all_results,
+        'model_comparison': comparison_summary,
+        'methodology': {
+            'cross_validation_folds': 5,
+            'metrics': ['RMSE', 'MAE', 'R²'],
+            'preprocessing': 'StandardScaler for feature scaling'
+        }
+    }
+    
+    try:
+        with open(output_file, 'w') as f:
+            json.dump(final_results, f, indent=2, default=str)
+        print(f"\n📊 Results saved to: {output_file}")
+    except Exception as e:
+        print(f"Error saving results: {e}")
 
 def main():
-    """Main function to demonstrate the kiwi data analysis capabilities."""
-    print("Kiwi Data Analysis Tool")
+    """Main function to run all model evaluations."""
+    print("🥝 Kiwi NIR Spectroscopic Data - ML Model Evaluation")
     print("=" * 60)
     
-    # Initialize analyzer
     try:
-        analyzer = KiwiDataAnalyzer()
+        # 1. Check dependencies
+        if not SKLEARN_AVAILABLE:
+            print("❌ Scikit-learn is required but not available. Please install it.")
+            return
+        
+        # 2. Load and prepare data
+        X, y, feature_names = prepare_data()
+        
+        # 3. Create available models
+        models = create_models()
+        
+        if not models:
+            print("❌ No models available. Please check your dependencies.")
+            return
+        
+        print(f"\n📋 Models to evaluate: {list(models.keys())}")
+        
+        # 4. Run evaluations
+        all_results = {}
+        cv_folds = 5
+        
+        for model_name, model in models.items():
+            results = run_model_evaluation(model, model_name, X, y, cv_folds)
+            all_results[model_name] = results
+        
+        # 5. Compare models
+        comparison_summary = compare_models(all_results)
+        
+        # 6. Save results
+        save_results(all_results, comparison_summary)
+        
+        print("\n✅ Evaluation completed successfully!")
+        print("📈 Check the generated JSON file for detailed results.")
+        
     except Exception as e:
-        print(f"Error initializing analyzer: {str(e)}")
-        return
-    
-    # Show available files
-    print("Available data files:")
-    get_data_info()
-    
-    # Load data (first 3 files as example)
-    print("\nLoading first 3 kiwi files...")
-    analyzer.load_data(file_numbers=[1, 2, 3])
-    
-    # Analyze data structure
-    analyzer.analyze_data_structure()
-    
-    # Generate summary report
-    analyzer.generate_summary_report()
-    
-    # Create visualizations
-    print("\nGenerating visualizations...")
-    try:
-        analyzer.plot_data_overview()
-        analyzer.plot_frequency_response(file_numbers=[1, 2], max_measurements=3)
-    except Exception as e:
-        print(f"Error creating plots: {str(e)}")
-        print("Note: Plotting requires matplotlib. Install with: pip install matplotlib seaborn")
-    
-    print("\nAnalysis complete!")
-    print("\nTo use this tool programmatically:")
-    print("  from main import KiwiDataAnalyzer")
-    print("  analyzer = KiwiDataAnalyzer()")
-    print("  analyzer.load_data([1, 2, 3, 4, 5, 6])")
-    print("  analyzer.generate_summary_report()")
-
+        print(f"\n❌ Error in main execution: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
     main() 
