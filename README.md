@@ -1,2 +1,1 @@
-# kiwi_proj
-Hello
+Kiwi Proj
