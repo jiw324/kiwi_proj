@@ -36,9 +36,7 @@ class PLSModel(BaseNIRModel):
         self.scale_features = scale_features
         self.max_components = max_components
         self.optimal_components = None
-        
-        if self.scale_features:
-            self.scaler = StandardScaler()
+        self.scaler = None  # AI-SUGGESTION: Initialize as None, create when needed
     
     def _create_model(self):
         """Create PLS regression model instance."""
@@ -51,12 +49,13 @@ class PLSModel(BaseNIRModel):
             tol=1e-06
         )
     
-    def _preprocess_features(self, X):
+    def _preprocess_features(self, X, fit_scaler=False):
         """
         Apply PLS-specific preprocessing to NIR spectral features.
         
         Args:
             X (array-like): Raw spectral data
+            fit_scaler (bool): Whether to fit the scaler (True for training, False for prediction)
             
         Returns:
             array: Preprocessed spectral data
@@ -66,7 +65,7 @@ class PLSModel(BaseNIRModel):
         # AI-SUGGESTION: For NIR spectroscopic data, mean centering is crucial
         # Standard scaling can also help but should be applied consistently
         if self.scale_features:
-            if self.scaler is None:
+            if fit_scaler or self.scaler is None:
                 self.scaler = StandardScaler()
                 X_processed = self.scaler.fit_transform(X_processed)
             else:
@@ -74,7 +73,7 @@ class PLSModel(BaseNIRModel):
         
         return X_processed
     
-    def optimize_components(self, X, y, cv_folds: int = 5):
+    def optimize_components(self, X, y, cv_folds: int = 10):
         """
         Find optimal number of PLS components using cross-validation.
         
@@ -97,16 +96,17 @@ class PLSModel(BaseNIRModel):
         
         print(f"Optimizing PLS components (testing 1 to {max_components})...")
         
+        # AI-SUGGESTION: Create temporary scaler for component optimization
+        temp_scaler = StandardScaler() if self.scale_features else None
+        X_scaled = temp_scaler.fit_transform(X) if self.scale_features else X
+        
         for n_comp in component_range:
             # Create temporary PLS model
             temp_pls = PLSRegression(n_components=n_comp, scale=False)
             
-            # Preprocess data
-            X_processed = self._preprocess_features(X)
-            
-            # Cross-validation
+            # Cross-validation with pre-scaled data
             scores = cross_val_score(
-                temp_pls, X_processed, y, 
+                temp_pls, X_scaled, y, 
                 cv=cv_folds, 
                 scoring='neg_mean_squared_error'
             )
@@ -144,7 +144,7 @@ class PLSModel(BaseNIRModel):
                 self.optimize_components(X, y)
             
             # Now fit with optimal components
-            X_processed = self._preprocess_features(X)
+            X_processed = self._preprocess_features(X, fit_scaler=True)
             
             self.model = self._create_model()
             self.model.fit(X_processed, y)
