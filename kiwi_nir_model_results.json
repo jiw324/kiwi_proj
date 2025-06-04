@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-06-04T11:38:03.112672",
+  "timestamp": "2025-06-04T12:03:32.644723",
   "data_info": {
     "description": "NIR spectroscopic data for kiwi sweetness prediction",
     "features": "Near-infrared reflectance values at various wavelengths",
@@ -22,7 +22,7 @@
         "mae": 1.1032203243624312,
         "r2": 0.3665177749000965
       },
-      "training_time_seconds": 0.020038843154907227,
+      "training_time_seconds": 0.01765298843383789,
       "model_info": {
         "model_type": "PLS Regression",
         "n_components": 16,
@@ -66,8 +66,110 @@
       }
     },
     "Random_Forest": {
-      "Random_Forest_error": "'bool' object is not callable",
+      "Random_Forest_cv_results": {
+        "rmse_mean": 1.6451847866928457,
+        "rmse_std": 0.23015834821588116,
+        "mae_mean": 1.2815285714285714,
+        "mae_std": 0.19729414507921852,
+        "r2_mean": 0.11142349204421305,
+        "r2_std": 0.14762072077853014,
+        "cv_folds": 10,
+        "n_samples": 420
+      },
+      "Random_Forest_overall": {
+        "rmse": 1.6612061424215379,
+        "mae": 1.2815285714285714,
+        "r2": 0.12377839628781706
+      },
+      "training_time_seconds": 0.810086727142334,
+      "model_info": {
+        "model_type": "Random Forest Regression",
+        "n_estimators": 50,
+        "max_depth": 10,
+        "min_samples_split": 2,
+        "min_samples_leaf": 1,
+        "max_features": "sqrt",
+        "scale_features": false,
+        "oob_score": 0.09320754103357698,
+        "best_hyperparameters": {
+          "max_depth": 10,
+          "max_features": null,
+          "min_samples_leaf": 2,
+          "min_samples_split": 10,
+          "n_estimators": 50
+        }
+      }
+    },
+    "SVR": {
+      "SVR_cv_results": {
+        "rmse_mean": 1.6282439728945555,
+        "rmse_std": 0.16714707206197818,
+        "mae_mean": 1.2740617526648896,
+        "mae_std": 0.1477806029051472,
+        "r2_mean": 0.1297165303189926,
+        "r2_std": 0.07849731283719726,
+        "cv_folds": 10,
+        "n_samples": 420
+      },
+      "SVR_overall": {
+        "rmse": 1.636800714493471,
+        "mae": 1.2740617526648896,
+        "r2": 0.14933510255489024
+      },
+      "training_time_seconds": 0.06732511520385742,
+      "model_info": {
+        "model_type": "Support Vector Regression",
+        "kernel": "rbf",
+        "C": 100,
+        "epsilon": 0.1,
+        "gamma": 0.01,
+        "n_support_vectors": 397,
+        "support_vector_ratio": 1.0,
+        "best_hyperparameters": {
+          "C": 100,
+          "epsilon": 0.1,
+          "gamma": 0.01,
+          "kernel": "rbf"
+        }
+      }
+    },
+    "XGBoost": {
+      "XGBoost_error": "'bool' object is not callable",
       "training_time_seconds": 0
+    },
+    "1D_CNN": {
+      "1D_CNN_cv_results": {
+        "rmse_mean": 3.0099400502673315,
+        "rmse_std": 0.35725194604790894,
+        "mae_mean": 2.4097191214561464,
+        "mae_std": 0.3148945450980639,
+        "r2_mean": -1.9828803539276123,
+        "r2_std": 0.46062212639749345,
+        "cv_folds": 10,
+        "n_samples": 420
+      },
+      "1D_CNN_overall": {
+        "rmse": 3.031067168449189,
+        "mae": 2.409719076610747,
+        "r2": -1.9171449482770457
+      },
+      "training_time_seconds": 45.69119429588318,
+      "model_info": {
+        "model_type": "1D Convolutional Neural Network",
+        "input_shape": [
+          160,
+          1
+        ],
+        "epochs": 50,
+        "batch_size": 32,
+        "learning_rate": 0.001,
+        "total_parameters": 60993,
+        "trainable_parameters": "60545",
+        "epochs_trained": 50,
+        "final_training_loss": 8.005509376525879,
+        "final_validation_loss": 3.2245090007781982,
+        "best_validation_loss": 3.006258249282837
+      }
     }
   },
   "model_comparison": {
@@ -83,7 +185,46 @@
         "overall_rmse": 1.4124847468630954,
         "overall_mae": 1.1032203243624312,
         "overall_r2": 0.3665177749000965,
-        "training_time": 0.020038843154907227
+        "training_time": 0.01765298843383789
+      },
+      {
+        "model": "SVR",
+        "rmse_mean": 1.6282439728945555,
+        "rmse_std": 0.16714707206197818,
+        "mae_mean": 1.2740617526648896,
+        "mae_std": 0.1477806029051472,
+        "r2_mean": 0.1297165303189926,
+        "r2_std": 0.07849731283719726,
+        "overall_rmse": 1.636800714493471,
+        "overall_mae": 1.2740617526648896,
+        "overall_r2": 0.14933510255489024,
+        "training_time": 0.06732511520385742
+      },
+      {
+        "model": "Random_Forest",
+        "rmse_mean": 1.6451847866928457,
+        "rmse_std": 0.23015834821588116,
+        "mae_mean": 1.2815285714285714,
+        "mae_std": 0.19729414507921852,
+        "r2_mean": 0.11142349204421305,
+        "r2_std": 0.14762072077853014,
+        "overall_rmse": 1.6612061424215379,
+        "overall_mae": 1.2815285714285714,
+        "overall_r2": 0.12377839628781706,
+        "training_time": 0.810086727142334
+      },
+      {
+        "model": "1D_CNN",
+        "rmse_mean": 3.0099400502673315,
+        "rmse_std": 0.35725194604790894,
+        "mae_mean": 2.4097191214561464,
+        "mae_std": 0.3148945450980639,
+        "r2_mean": -1.9828803539276123,
+        "r2_std": 0.46062212639749345,
+        "overall_rmse": 3.031067168449189,
+        "overall_mae": 2.409719076610747,
+        "overall_r2": -1.9171449482770457,
+        "training_time": 45.69119429588318
       }
     ],
     "best_model": "PLS_Regression",

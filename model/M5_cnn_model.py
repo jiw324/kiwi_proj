@@ -339,7 +339,7 @@ class CNNModel(BaseNIRModel):
             "batch_size": self.batch_size,
             "learning_rate": self.learning_rate,
             "total_parameters": self.model.count_params(),
-            "trainable_parameters": sum([np.prod(v.get_shape()) for v in self.model.trainable_variables])
+            "trainable_parameters": sum([np.prod(v.shape) for v in self.model.trainable_variables])
         }
         
         # Add training history information

@@ -393,7 +393,9 @@ def main():
         models = {
             'PLS_Regression': PLSModel(n_components=10, max_components=20),
             'Random_Forest': RandomForestModel(n_estimators=100, tune_hyperparameters=True),
-            # 'SVR': SVRModel(kernel='rbf', tune_hyperparameters=True),
+            'SVR': SVRModel(kernel='rbf', tune_hyperparameters=True),
+            'XGBoost': XGBoostModel(n_estimators=100, tune_hyperparameters=True),
+            '1D_CNN': CNNModel(epochs=50, batch_size=32, early_stopping_patience=10)
         }
         
         logger.info(f"📋 Models to evaluate: {list(models.keys())}")

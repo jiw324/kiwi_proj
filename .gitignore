@@ -1,2 +1,6 @@
 src/data
 .DS_Store
+
+# Log files and directories
+logs/
+*.log

@@ -98,7 +98,7 @@ class XGBoostModel(BaseNIRModel):
         
         return X_processed
     
-    def tune_hyperparameters(self, X, y, cv_folds: int = 5):
+    def _tune_hyperparameters(self, X, y, cv_folds: int = 5):
         """
         Perform hyperparameter tuning using GridSearchCV.
         
@@ -188,7 +188,7 @@ class XGBoostModel(BaseNIRModel):
             
             # Tune hyperparameters if requested
             if should_tune:
-                self.tune_hyperparameters(X, y)
+                self._tune_hyperparameters(X, y)
             
             # Preprocess features
             X_processed = self._preprocess_features(X, fit_scaler=True)

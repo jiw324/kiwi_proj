@@ -93,6 +93,10 @@ def test_model(model_class, model_name, model_params, X, y):
         predictions = model.predict(X)
         cv_results = model.evaluate_with_cv(X, y, cv_folds=2)
         
+        # AI-SUGGESTION: Also test get_model_info() to catch more potential issues
+        if hasattr(model, 'get_model_info'):
+            model_info = model.get_model_info()
+        
         # Extract basic metrics for return
         from sklearn.metrics import mean_squared_error, r2_score
         rmse = np.sqrt(mean_squared_error(y, predictions))
@@ -108,6 +112,8 @@ def test_model(model_class, model_name, model_params, X, y):
         }
         
     except Exception as e:
+        # AI-SUGGESTION: More detailed error reporting for debugging
+        print(f"💥 {model_name} Error Details: {str(e)}")
         return {
             'status': 'FAILED',
             'error': str(e)
@@ -155,6 +161,36 @@ def run_all_tests():
             'params': {'epochs': 10, 'batch_size': 16, 'early_stopping_patience': 3}
         }
     ]
+    
+    # AI-SUGGESTION: Optional comprehensive test mode (uncomment to test like main.py)
+    # models_to_test = [
+    #     {
+    #         'class': PLSModel,
+    #         'name': 'PLS_Regression',
+    #         'params': {'n_components': 10, 'max_components': 20}
+    #     },
+    #     {
+    #         'class': RandomForestModel,
+    #         'name': 'Random_Forest',
+    #         'params': {'n_estimators': 100, 'tune_hyperparameters': True}  # Same as main.py
+    #     },
+    #     {
+    #         'class': SVRModel,
+    #         'name': 'SVR',
+    #         'params': {'kernel': 'rbf', 'tune_hyperparameters': True}  # Same as main.py
+    #     },
+    #     {
+    #         'class': XGBoostModel,
+    #         'name': 'XGBoost',
+    #         'params': {'n_estimators': 100, 'tune_hyperparameters': True}  # Same as main.py
+    #     },
+    #     {
+    #         'class': CNNModel,
+    #         'name': '1D_CNN',
+    #         'params': {'epochs': 50, 'batch_size': 32, 'early_stopping_patience': 10}  # Same as main.py
+    #     }
+    # ]
+    
     # Run tests
     test_results = {}
     
