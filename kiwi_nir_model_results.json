@@ -1,0 +1,21 @@
+{
+  "timestamp": "2025-06-04T10:41:20.533378",
+  "data_info": {
+    "description": "NIR spectroscopic data for kiwi sweetness prediction",
+    "features": "Near-infrared reflectance values at various wavelengths",
+    "target": "Kiwi sweetness values"
+  },
+  "individual_model_results": {},
+  "model_comparison": {
+    "error": "No successful evaluations"
+  },
+  "methodology": {
+    "cross_validation_folds": 5,
+    "metrics": [
+      "RMSE",
+      "MAE",
+      "R\u00b2"
+    ],
+    "preprocessing": "Model-specific feature scaling and preprocessing"
+  }
+}

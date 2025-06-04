@@ -32,12 +32,17 @@ def prepare_data():
     print("=== Loading Kiwi NIR Data ===")
     
     # Load the data
-    df = load_kiwi_data(data_directory="../src/data")
+    df = load_kiwi_data(data_directory="src/data")
     
     if df.empty:
         raise ValueError("No data loaded. Please check your data files.")
     
     print(f"Data loaded successfully: {df.shape[0]} samples, {df.shape[1]} features")
+    
+    # AI-SUGGESTION: Display DataFrame head to inspect the data structure
+    # print("\n=== DataFrame Head (First 5 rows) ===")
+    # print(df.head())
+    # print(f"\nColumns: {list(df.columns)}")
     
     # AI-SUGGESTION: Identify target column (sweetness) and feature columns (wavelengths)
     # The target is typically the 'Unnamed: 0' column or similar
@@ -221,25 +226,27 @@ def main():
     try:
         # 1. Load and prepare data
         X, y, feature_names = prepare_data()
-        
+        print("Yes")
+        print(X.shape)
+        print(y.shape)
         # 2. Initialize all models
         models = {
-            'PLS_Regression': PLSModel(n_components=10, tune_hyperparameters=True),
-            'Random_Forest': RandomForestModel(n_estimators=100, tune_hyperparameters=True),
-            'SVR': SVRModel(kernel='rbf', tune_hyperparameters=True),
+            # 'PLS_Regression': PLSModel(n_components=10, tune_hyperparameters=True),
+            # 'Random_Forest': RandomForestModel(n_estimators=100, tune_hyperparameters=True),
+            # 'SVR': SVRModel(kernel='rbf', tune_hyperparameters=True),
         }
         
         # Add XGBoost if available
-        try:
-            models['XGBoost'] = XGBoostModel(n_estimators=100, tune_hyperparameters=True)
-        except ImportError:
-            print("⚠️ XGBoost not available - skipping XGBoost evaluation")
+        # try:
+        #     models['XGBoost'] = XGBoostModel(n_estimators=100, tune_hyperparameters=True)
+        # except ImportError:
+        #     print("⚠️ XGBoost not available - skipping XGBoost evaluation")
         
-        # Add CNN if available (with reduced epochs for demonstration)
-        try:
-            models['1D_CNN'] = CNNModel(epochs=50, batch_size=16, early_stopping_patience=10)
-        except ImportError:
-            print("⚠️ TensorFlow not available - skipping CNN evaluation")
+        # # Add CNN if available (with reduced epochs for demonstration)
+        # try:
+        #     models['1D_CNN'] = CNNModel(epochs=50, batch_size=16, early_stopping_patience=10)
+        # except ImportError:
+        #     print("⚠️ TensorFlow not available - skipping CNN evaluation")
         
         print(f"\n📋 Models to evaluate: {list(models.keys())}")
         
