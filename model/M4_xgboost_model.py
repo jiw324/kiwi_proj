@@ -54,8 +54,8 @@ class XGBoostModel(BaseNIRModel):
         self.tune_hyperparameters = tune_hyperparameters
         self.best_params = None
         
-        if self.scale_features:
-            self.scaler = StandardScaler()
+        # AI-SUGGESTION: Initialize scaler as None, create when needed
+        self.scaler = None
     
     def _create_model(self):
         """Create XGBoost regression model instance."""
@@ -74,12 +74,13 @@ class XGBoostModel(BaseNIRModel):
             verbose=False
         )
     
-    def _preprocess_features(self, X):
+    def _preprocess_features(self, X, fit_scaler=False):
         """
         Apply XGBoost-specific preprocessing to NIR spectral features.
         
         Args:
             X (array-like): Raw spectral data
+            fit_scaler (bool): Whether to fit the scaler (True for training, False for prediction)
             
         Returns:
             array: Preprocessed spectral data
@@ -89,7 +90,7 @@ class XGBoostModel(BaseNIRModel):
         # AI-SUGGESTION: XGBoost can benefit from feature scaling for faster convergence
         # and more stable training, especially with spectral data
         if self.scale_features:
-            if self.scaler is None:
+            if fit_scaler or self.scaler is None:
                 self.scaler = StandardScaler()
                 X_processed = self.scaler.fit_transform(X_processed)
             else:
@@ -111,7 +112,13 @@ class XGBoostModel(BaseNIRModel):
         """
         X = np.array(X)
         y = np.array(y)
-        X_processed = self._preprocess_features(X)
+        
+        # AI-SUGGESTION: Create temporary scaler for hyperparameter tuning
+        if self.scale_features:
+            temp_scaler = StandardScaler()
+            X_processed = temp_scaler.fit_transform(X)
+        else:
+            X_processed = X
         
         # AI-SUGGESTION: Parameter grid optimized for NIR spectroscopic data
         # Conservative parameters to prevent overfitting on potentially small datasets
@@ -184,7 +191,7 @@ class XGBoostModel(BaseNIRModel):
                 self.tune_hyperparameters(X, y)
             
             # Preprocess features
-            X_processed = self._preprocess_features(X)
+            X_processed = self._preprocess_features(X, fit_scaler=True)
             
             # Split data for early stopping if enough samples
             if len(X_processed) > 20 and validation_split > 0:

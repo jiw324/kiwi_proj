@@ -107,7 +107,7 @@ class RandomForestModel(BaseNIRModel):
             'max_features': ['sqrt', 'log2', None]
         }
         
-        print("Tuning Random Forest hyperparameters...")
+        # print("Tuning Random Forest hyperparameters...")
         
         # Create base model for tuning
         rf_base = RandomForestRegressor(

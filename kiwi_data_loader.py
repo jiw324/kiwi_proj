@@ -7,19 +7,53 @@
 import pandas as pd
 import os
 
-def load_kiwi_data(data_directory="data", num_files=3):
+def load_specific_file(file_path):
     """
-    Loads kiwi data from kiwi-1.csv, kiwi-2.csv, ..., kiwi-N.csv
+    Load a specific CSV file.
+    
+    Args:
+        file_path (str): Path to the specific CSV file to load
+        
+    Returns:
+        pandas.DataFrame: DataFrame containing the loaded data.
+                          Returns an empty DataFrame if file loading fails.
+    """
+    try:
+        print(f"Attempting to load file: {os.path.abspath(file_path)}")
+        df = pd.read_csv(file_path)
+        print(f"Successfully loaded: {file_path}")
+        print(f"Data shape: {df.shape}")
+        return df
+    except FileNotFoundError:
+        print(f"Error: File not found at '{file_path}'.")
+        return pd.DataFrame()
+    except pd.errors.EmptyDataError:
+        print(f"Error: File '{file_path}' is empty.")
+        return pd.DataFrame()
+    except Exception as e:
+        print(f"Error loading file '{file_path}': {e}")
+        return pd.DataFrame()
+
+def load_kiwi_data(data_directory="data", num_files=3, specific_file=None):
+    """
+    Loads kiwi data from multiple kiwi-X.csv files or a specific file
     located in the specified data_directory and concatenates them.
 
     Args:
-        data_directory (str): The subdirectory where 'kiwi-X.csv' files are stored.
+        data_directory (str): The subdirectory where files are stored.
         num_files (int): The number of kiwi files to load (e.g., 3 for kiwi-1 to kiwi-3).
+        specific_file (str): If provided, loads only this specific file from data_directory.
 
     Returns:
         pandas.DataFrame: A single DataFrame containing all data from the loaded files.
                           Returns an empty DataFrame if no files are successfully loaded or an error occurs.
     """
+    # If specific file is requested, load only that file
+    if specific_file:
+        file_path = os.path.join(data_directory, specific_file)
+        return load_specific_file(file_path)
+    
+    # Otherwise, load multiple kiwi files as before
     all_dataframes = []
     # AI-SUGGESTION: For more dynamic file discovery (e.g., any kiwi-*.csv file), 
     # consider using: import glob; file_paths = glob.glob(os.path.join(data_directory, 'kiwi-*.csv'))

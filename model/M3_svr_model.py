@@ -43,8 +43,8 @@ class SVRModel(BaseNIRModel):
         self.tune_hyperparameters = tune_hyperparameters
         self.best_params = None
         
-        # SVR requires feature scaling for optimal performance
-        self.scaler = StandardScaler()
+        # AI-SUGGESTION: Initialize scaler as None, create when needed
+        self.scaler = None
     
     def _create_model(self):
         """Create SVR model instance."""
@@ -57,12 +57,13 @@ class SVRModel(BaseNIRModel):
             max_iter=3000    # Increase max iterations for convergence
         )
     
-    def _preprocess_features(self, X):
+    def _preprocess_features(self, X, fit_scaler=False):
         """
         Apply SVR-specific preprocessing to NIR spectral features.
         
         Args:
             X (array-like): Raw spectral data
+            fit_scaler (bool): Whether to fit the scaler (True for training, False for prediction)
             
         Returns:
             array: Preprocessed spectral data
@@ -71,7 +72,7 @@ class SVRModel(BaseNIRModel):
         
         # AI-SUGGESTION: Feature scaling is essential for SVR as it's sensitive to
         # the scale of input features. StandardScaler ensures all features contribute equally
-        if self.scaler is None:
+        if fit_scaler or self.scaler is None:
             self.scaler = StandardScaler()
             X_processed = self.scaler.fit_transform(X_processed)
         else:
@@ -93,7 +94,10 @@ class SVRModel(BaseNIRModel):
         """
         X = np.array(X)
         y = np.array(y)
-        X_processed = self._preprocess_features(X)
+        
+        # AI-SUGGESTION: Create temporary scaler for hyperparameter tuning
+        temp_scaler = StandardScaler()
+        X_processed = temp_scaler.fit_transform(X)
         
         # AI-SUGGESTION: Parameter grid optimized for NIR spectroscopic data
         # Conservative C values to prevent overfitting, multiple kernels tested
@@ -173,7 +177,7 @@ class SVRModel(BaseNIRModel):
                 self.tune_hyperparameters(X, y)
             
             # Preprocess features
-            X_processed = self._preprocess_features(X)
+            X_processed = self._preprocess_features(X, fit_scaler=True)
             
             # Create and fit model
             self.model = self._create_model()

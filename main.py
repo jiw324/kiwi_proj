@@ -17,12 +17,24 @@ warnings.filterwarnings('ignore')
 # Import data loader
 from kiwi_data_loader import load_kiwi_data
 
-# Import all model classes
-from model.pls_model import PLSModel
-from model.random_forest_model import RandomForestModel
-from model.xgboost_model import XGBoostModel
-from model.svr_model import SVRModel
-from model.cnn_model import CNNModel
+# Import all model classes using importlib for numbered filenames
+import importlib
+
+# Dynamic imports for numbered model files
+pls_module = importlib.import_module('model.M1_pls_model')
+PLSModel = pls_module.PLSModel
+
+rf_module = importlib.import_module('model.M2_random_forest_model')
+RandomForestModel = rf_module.RandomForestModel
+
+svr_module = importlib.import_module('model.M3_svr_model')
+SVRModel = svr_module.SVRModel
+
+xgb_module = importlib.import_module('model.M4_xgboost_model')
+XGBoostModel = xgb_module.XGBoostModel
+
+cnn_module = importlib.import_module('model.M5_cnn_model')
+CNNModel = cnn_module.CNNModel
 
 def setup_logging():
     """

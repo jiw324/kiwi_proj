@@ -57,8 +57,8 @@ class CNNModel(BaseNIRModel):
         self.history = None
         self.input_shape = None
         
-        # CNN typically benefits from feature scaling
-        self.scaler = StandardScaler()
+        # AI-SUGGESTION: Initialize scaler as None, create when needed
+        self.scaler = None
         
         # Set TensorFlow random seeds
         tf.random.set_seed(random_state)
@@ -115,12 +115,13 @@ class CNNModel(BaseNIRModel):
         
         return model
     
-    def _preprocess_features(self, X):
+    def _preprocess_features(self, X, fit_scaler=False):
         """
         Apply CNN-specific preprocessing to NIR spectral features.
         
         Args:
             X (array-like): Raw spectral data
+            fit_scaler (bool): Whether to fit the scaler (True for training, False for prediction)
             
         Returns:
             array: Preprocessed spectral data
@@ -128,7 +129,7 @@ class CNNModel(BaseNIRModel):
         X_processed = np.array(X, dtype=np.float32)
         
         # AI-SUGGESTION: Standardization helps CNN training stability
-        if self.scaler is None:
+        if fit_scaler or self.scaler is None:
             self.scaler = StandardScaler()
             X_processed = self.scaler.fit_transform(X_processed)
         else:
@@ -157,7 +158,7 @@ class CNNModel(BaseNIRModel):
             y = np.array(y, dtype=np.float32)
             
             # Preprocess features
-            X_processed = self._preprocess_features(X)
+            X_processed = self._preprocess_features(X, fit_scaler=True)
             
             # Store input shape for model creation
             self.input_shape = (X_processed.shape[1], 1)

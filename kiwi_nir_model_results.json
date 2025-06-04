@@ -1,5 +1,5 @@
 {
-  "timestamp": "2025-06-04T11:01:41.102765",
+  "timestamp": "2025-06-04T11:38:03.112672",
   "data_info": {
     "description": "NIR spectroscopic data for kiwi sweetness prediction",
     "features": "Near-infrared reflectance values at various wavelengths",
@@ -22,7 +22,7 @@
         "mae": 1.1032203243624312,
         "r2": 0.3665177749000965
       },
-      "training_time_seconds": 0.01777791976928711,
+      "training_time_seconds": 0.020038843154907227,
       "model_info": {
         "model_type": "PLS Regression",
         "n_components": 16,
@@ -83,7 +83,7 @@
         "overall_rmse": 1.4124847468630954,
         "overall_mae": 1.1032203243624312,
         "overall_r2": 0.3665177749000965,
-        "training_time": 0.01777791976928711
+        "training_time": 0.020038843154907227
       }
     ],
     "best_model": "PLS_Regression",

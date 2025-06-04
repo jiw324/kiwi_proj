@@ -1,0 +1,79 @@
+2025-06-04 11:38:02,014 - INFO - ================================================================================
+2025-06-04 11:38:02,014 - INFO - 🥝 KIWI NIR SPECTROSCOPIC DATA - ML MODEL EVALUATION LOG
+2025-06-04 11:38:02,014 - INFO - ================================================================================
+2025-06-04 11:38:02,014 - INFO - Log file: logs/kiwi_nir_evaluation_20250604_113802.log
+2025-06-04 11:38:02,014 - INFO - Session started: 2025-06-04 11:38:02
+2025-06-04 11:38:02,014 - INFO - 🥝 Kiwi NIR Spectroscopic Data - ML Model Evaluation
+2025-06-04 11:38:02,015 - INFO - ============================================================
+2025-06-04 11:38:02,015 - INFO - 📥 LOADING AND PREPARING DATA
+2025-06-04 11:38:02,028 - INFO - Data shape - X: (420, 160), y: (420,)
+2025-06-04 11:38:02,028 - INFO - ✅ Data loading completed in 0.01 seconds
+2025-06-04 11:38:02,028 - INFO - 📊 Dataset Summary:
+2025-06-04 11:38:02,028 - INFO -   • Samples: 420
+2025-06-04 11:38:02,028 - INFO -   • Features (wavelengths): 160
+2025-06-04 11:38:02,028 - INFO -   • Target range: [7.300, 16.600]
+2025-06-04 11:38:02,029 - INFO -   • Target mean ± std: 11.642 ± 1.775
+2025-06-04 11:38:02,029 - INFO - 
+🔧 INITIALIZING MODELS
+2025-06-04 11:38:02,029 - INFO - 📋 Models to evaluate: ['PLS_Regression', 'Random_Forest']
+2025-06-04 11:38:02,029 - INFO - 
+🚀 STARTING MODEL EVALUATIONS
+2025-06-04 11:38:02,029 - INFO - Cross-validation setup: 10-fold CV
+2025-06-04 11:38:02,029 - INFO - 
+🔄 Starting evaluation for: PLS_Regression
+2025-06-04 11:38:02,322 - INFO - 
+============================================================
+2025-06-04 11:38:02,322 - INFO - MODEL EVALUATION RESULTS: PLS_Regression
+2025-06-04 11:38:02,322 - INFO - ============================================================
+2025-06-04 11:38:02,322 - INFO - Training Time: 0.29 seconds
+2025-06-04 11:38:02,322 - INFO - 📊 CROSS-VALIDATION RESULTS:
+2025-06-04 11:38:02,322 - INFO -   • RMSE: 1.4036 ± 0.1578
+2025-06-04 11:38:02,322 - INFO -   • MAE:  1.1032 ± 0.1580
+2025-06-04 11:38:02,322 - INFO -   • R²:   0.3457 ± 0.1224
+2025-06-04 11:38:02,322 - INFO -   • CV Folds: 10
+2025-06-04 11:38:02,322 - INFO -   • Samples: 420
+2025-06-04 11:38:02,322 - INFO - 📈 OVERALL PERFORMANCE:
+2025-06-04 11:38:02,322 - INFO -   • Overall RMSE: 1.4125
+2025-06-04 11:38:02,322 - INFO -   • Overall MAE:  1.1032
+2025-06-04 11:38:02,322 - INFO -   • Overall R²:   0.3665
+2025-06-04 11:38:02,322 - INFO - 🔧 MODEL CONFIGURATION:
+2025-06-04 11:38:02,322 - INFO -   • model_type: PLS Regression
+2025-06-04 11:38:02,322 - INFO -   • n_components: 16
+2025-06-04 11:38:02,322 - INFO -   • scale_features: True
+2025-06-04 11:38:02,322 - INFO - ✅ PLS_Regression evaluation completed successfully
+2025-06-04 11:38:02,322 - INFO - 
+🔄 Starting evaluation for: Random_Forest
+2025-06-04 11:38:03,108 - INFO - 
+============================================================
+2025-06-04 11:38:03,108 - INFO - MODEL EVALUATION RESULTS: Random_Forest
+2025-06-04 11:38:03,108 - INFO - ============================================================
+2025-06-04 11:38:03,108 - INFO - Training Time: 0.79 seconds
+2025-06-04 11:38:03,108 - ERROR - ❌ Random_Forest FAILED: {'Random_Forest_error': "'bool' object is not callable", 'training_time_seconds': 0}
+2025-06-04 11:38:03,108 - INFO - 
+📈 COMPARING ALL MODELS
+2025-06-04 11:38:03,112 - INFO - 
+💾 SAVING RESULTS
+2025-06-04 11:38:03,112 - INFO - 
+================================================================================
+2025-06-04 11:38:03,112 - INFO - 🏆 FINAL MODEL COMPARISON & RANKING
+2025-06-04 11:38:03,112 - INFO - ================================================================================
+2025-06-04 11:38:03,112 - INFO - 📋 MODEL PERFORMANCE RANKING (by R² score):
+2025-06-04 11:38:03,113 - INFO - --------------------------------------------------------------------------------
+2025-06-04 11:38:03,113 - INFO - 1. PLS_Regression 
+2025-06-04 11:38:03,113 - INFO -    R²:   0.3457 ± 0.1224
+2025-06-04 11:38:03,113 - INFO -    RMSE: 1.4036 ± 0.1578
+2025-06-04 11:38:03,113 - INFO -    MAE:  1.1032 ± 0.1580
+2025-06-04 11:38:03,113 - INFO -    Time: 0.0s
+2025-06-04 11:38:03,113 - INFO - 
+2025-06-04 11:38:03,113 - INFO - 🏆 BEST PERFORMING MODEL: PLS_Regression
+2025-06-04 11:38:03,113 - INFO -    Best R² Score: 0.3457
+2025-06-04 11:38:03,113 - INFO -    Best RMSE: 1.4036
+2025-06-04 11:38:03,113 - INFO - 
+================================================================================
+2025-06-04 11:38:03,113 - INFO - 📊 SESSION SUMMARY
+2025-06-04 11:38:03,113 - INFO - ================================================================================
+2025-06-04 11:38:03,113 - INFO - Total Execution Time: 1.10 seconds (0.0 minutes)
+2025-06-04 11:38:03,113 - INFO - Session Completed: 2025-06-04 11:38:03
+2025-06-04 11:38:03,113 - INFO - ================================================================================
+2025-06-04 11:38:03,113 - INFO - ✅ Evaluation completed successfully!
+2025-06-04 11:38:03,113 - INFO - 📈 Check the generated JSON file for detailed results.
