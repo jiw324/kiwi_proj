@@ -4,3 +4,6 @@ src/data
 # Log files and directories
 logs/
 *.log
+
+# Model results and output files
+kiwi_nir_model_results.json
