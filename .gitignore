@@ -1,4 +1,3 @@
-src/data
 .DS_Store
 
 # Log files and directories
@@ -7,3 +6,5 @@ logs/
 
 # Model results and output files
 kiwi_nir_model_results.json
+
+kiwiProj 
