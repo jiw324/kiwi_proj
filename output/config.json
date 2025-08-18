@@ -1,0 +1,14 @@
+{
+  "input_dir": "input",
+  "output_dir": "output",
+  "wl_min": 920.0,
+  "wl_max": 1680.0,
+  "use_snv": true,
+  "use_savgol": true,
+  "savgol_window": 21,
+  "savgol_polyorder": 2,
+  "random_state": 42,
+  "n_splits": 5,
+  "fast": true,
+  "pls_components": "2,4,6,8,10,12,14,16,20,24,28,32,36,40"
+}

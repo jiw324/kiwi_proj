@@ -1,0 +1,32 @@
+{
+  "PLS": {
+    "cv": [
+      {
+        "fold": 0,
+        "n_components": 20
+      },
+      {
+        "fold": 1,
+        "n_components": 14
+      },
+      {
+        "fold": 2,
+        "n_components": 20
+      }
+    ],
+    "lobo": [
+      {
+        "held_out": "kiwi-1.csv",
+        "n_components": "14"
+      },
+      {
+        "held_out": "kiwi-2.csv",
+        "n_components": "20"
+      },
+      {
+        "held_out": "kiwi-3.csv",
+        "n_components": "20"
+      }
+    ]
+  }
+}

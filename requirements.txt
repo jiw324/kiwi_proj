@@ -1,9 +1,21 @@
-pandas>=1.5.0
-numpy>=1.21.0
-matplotlib>=3.5.0
-seaborn>=0.11.0
-pathlib
-scikit-learn>=1.1.0
-xgboost>=1.6.0
-tensorflow>=2.10.0
-scipy>=1.9.0 
+# AI-Generated Code Header
+# **Intent:** Minimal dependencies for running the kiwi NIR experiment (data, models, CLI).
+# **Optimization:** Prefer widely available CPU-only packages.
+# **Safety:** Avoid heavy GPU deps by default; comment out optional libs.
+
+numpy>=1.24
+pandas>=2.1
+scipy>=1.11
+scikit-learn>=1.3
+xgboost>=1.7
+pyyaml>=6.0
+tqdm>=4.66
+xlrd>=2.0
+torch>=2.2
+
+# Optional plotting/reporting
+matplotlib>=3.8
+seaborn>=0.13
+
+# Optional deep learning (commented out)
+# torch>=2.2
