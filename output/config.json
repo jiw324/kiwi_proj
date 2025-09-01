@@ -10,5 +10,9 @@
   "random_state": 42,
   "n_splits": 5,
   "fast": true,
-  "pls_components": "2,4,6,8,10,12,14,16,20,24,28,32,36,40"
+  "pls_components": "auto",
+  "enable_pinn": false,
+  "enable_beer_pinn": false,
+  "enable_mphnn": true,
+  "enable_ensemble": true
 }

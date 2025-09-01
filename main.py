@@ -30,6 +30,8 @@ def parse_args() -> RunConfig:
     # AI-SUGGESTION: control physics models
     p.add_argument("--use_pinn", action="store_true", help="Enable PINN (BandIntegrator)")
     p.add_argument("--use_beer_pinn", action="store_true", help="Enable BeerPINN (Beer–Lambert)")
+    p.add_argument("--use_mphnn", action="store_true", help="Enable MPHNN (Multi-Physics Hybrid)")
+    p.add_argument("--use_ensemble", action="store_true", help="Enable Ensemble (PLS + SVR + MPHNN)")
     args = p.parse_args()
 
     cfg = RunConfig(
@@ -46,6 +48,8 @@ def parse_args() -> RunConfig:
         pls_components=args.pls_components,
         enable_pinn=args.use_pinn,
         enable_beer_pinn=args.use_beer_pinn,
+        enable_mphnn=args.use_mphnn,
+        enable_ensemble=args.use_ensemble,
     )
     return cfg
 

@@ -54,6 +54,22 @@ except Exception:  # noqa: BLE001
     BeerConfig = None  # type: ignore[assignment]
     train_beer_pinn = None  # type: ignore[assignment]
     predict_beer_pinn = None  # type: ignore[assignment]
+# AI-SUGGESTION: Add advanced MPHNN model
+try:
+    from model.M8_mphnn_wrapper import MPHNNWrapper, tune_mphnn, MPHNN_AVAILABLE
+except Exception:  # noqa: BLE001
+    MPHNNWrapper = None  # type: ignore[assignment]
+    tune_mphnn = None  # type: ignore[assignment]
+    MPHNN_AVAILABLE = False  # type: ignore[assignment]
+
+# AI-SUGGESTION: Add ensemble model
+try:
+    from model.ensemble_model import EnsembleModel, create_ensemble_pipeline
+    ENSEMBLE_AVAILABLE = True
+except Exception:  # noqa: BLE001
+    EnsembleModel = None  # type: ignore[assignment]
+    create_ensemble_pipeline = None  # type: ignore[assignment]
+    ENSEMBLE_AVAILABLE = False  # type: ignore[assignment]
 
 
 def rmse(y_true: np.ndarray, y_pred: np.ndarray) -> float:
@@ -76,6 +92,8 @@ class RunConfig:
     pls_components: str = "auto"  # "auto" or comma-separated list like "2,4,6,8,..."
     enable_pinn: bool = False  # AI-SUGGESTION: disabled by default
     enable_beer_pinn: bool = False  # AI-SUGGESTION: disabled by default
+    enable_mphnn: bool = False  # AI-SUGGESTION: enable advanced MPHNN model
+    enable_ensemble: bool = False  # AI-SUGGESTION: enable ensemble model
 
 
 def build_preprocess_pipeline(dataset: KiwiDataset, cfg: RunConfig) -> Tuple[Pipeline, np.ndarray]:
@@ -163,6 +181,79 @@ def run_cv(dataset: KiwiDataset, cfg: RunConfig) -> Tuple[pd.DataFrame, List[Dic
                         return predict_beer_pinn(self.m, X)
                 models.append(("BeerPINN", _BeerWrapper(beer_model)))
             except Exception:
+                pass
+        # Add MPHNN (advanced multi-physics) as optional
+        if cfg.enable_mphnn and MPHNN_AVAILABLE and (MPHNNWrapper is not None) and (tune_mphnn is not None):
+            try:
+                # Create batch labels for domain adaptation (convert strings to integers)
+                batch_strings = [dataset.batches[i] for i in tr]
+                # Create a mapping from string to integer
+                unique_batches = list(set(batch_strings))
+                batch_to_int = {batch: idx for idx, batch in enumerate(unique_batches)}
+                batch_labels = np.array([batch_to_int[batch] for batch in batch_strings])
+                # Create synthetic temperature data if not available (placeholder for real data)
+                temperatures = np.ones(len(tr)) * 22.0  # Default room temperature
+                
+                # Train MPHNN with domain adaptation
+                mphnn_model = MPHNNWrapper(
+                    encoder_dim=128,
+                    physics_dim=64,
+                    domain_dim=32,
+                    attention_heads=8,
+                    dropout_rate=0.2,
+                    beer_lambert_weight=1.0,
+                    smoothness_weight=0.5,
+                    contrastive_weight=0.1,
+                    temperature_compensation=True,
+                    max_epochs=200,  # Reduced for speed
+                    patience=20,
+                    batch_size=32,
+                    lr=1e-3,
+                    random_state=cfg.random_state
+                )
+                
+                # Fit the model
+                mphnn_model.fit(X_raw_win[tr], y_tr, 
+                               wavelengths=selected_wl,
+                               batch_labels=batch_labels,
+                               temperatures=temperatures)
+                
+                models.append(("MPHNN", mphnn_model))
+            except Exception as e:
+                print(f"MPHNN training failed: {e}")
+                pass
+        
+        # Add Ensemble model (combining PLS, SVR, and MPHNN)
+        if cfg.enable_ensemble and ENSEMBLE_AVAILABLE and (EnsembleModel is not None):
+            try:
+                # Create batch labels for domain adaptation
+                batch_strings = [dataset.batches[i] for i in tr]
+                unique_batches = list(set(batch_strings))
+                batch_to_int = {batch: idx for idx, batch in enumerate(unique_batches)}
+                batch_labels = np.array([batch_to_int[batch] for batch in batch_strings])
+                
+                # Create synthetic temperature data
+                temperatures = np.ones(len(tr)) * 22.0
+                
+                # Create ensemble model
+                ensemble_model = create_ensemble_pipeline(
+                    method="weighted_average",
+                    use_pls=True,
+                    use_svr=True,
+                    use_mphnn=cfg.enable_mphnn,  # Only use MPHNN if enabled
+                    random_state=cfg.random_state
+                )
+                
+                # Fit the ensemble model
+                ensemble_model.fit(X_raw_win[tr], y_tr,
+                                 wavelengths=selected_wl,
+                                 batch_labels=batch_labels,
+                                 temperatures=temperatures)
+                
+                models.append(("ENSEMBLE", ensemble_model))
+                print("✓ Ensemble model trained successfully")
+            except Exception as e:
+                print(f"Ensemble training failed: {e}")
                 pass
         if not cfg.fast:
             if tune_rf is not None:
@@ -348,6 +439,141 @@ def run_lobo(dataset: KiwiDataset, cfg: RunConfig) -> Tuple[pd.DataFrame, List[D
                         "y_pred": float(y_pred[idx_pos]),
                     })
         except Exception:
+            pass
+        
+        # MPHNN on LOBO raw reflectance with domain adaptation
+        try:
+            if not (cfg.enable_mphnn and MPHNN_AVAILABLE and (MPHNNWrapper is not None)):
+                raise RuntimeError("MPHNN disabled or unavailable")
+            
+            # Create batch labels for domain adaptation (convert strings to integers)
+            train_batch_strings = [dataset.batches[i] for i in np.nonzero(train_mask)[0]]
+            test_batch_strings = [dataset.batches[i] for i in np.nonzero(test_mask)[0]]
+            
+            # Create a mapping from string to integer (use all batches for consistency)
+            all_batches = list(set(dataset.batches))
+            batch_to_int = {batch: idx for idx, batch in enumerate(all_batches)}
+            
+            train_batch_labels = np.array([batch_to_int[batch] for batch in train_batch_strings])
+            test_batch_labels = np.array([batch_to_int[batch] for batch in test_batch_strings])
+            
+            # Create synthetic temperature data if not available
+            train_temperatures = np.ones(len(y_tr)) * 22.0
+            test_temperatures = np.ones(len(y_te)) * 22.0
+            
+            # Train MPHNN with domain adaptation
+            mphnn_model = MPHNNWrapper(
+                encoder_dim=128,
+                physics_dim=64,
+                domain_dim=32,
+                attention_heads=8,
+                dropout_rate=0.2,
+                beer_lambert_weight=1.0,
+                smoothness_weight=0.5,
+                contrastive_weight=0.1,
+                temperature_compensation=True,
+                max_epochs=200,  # Reduced for speed
+                patience=20,
+                batch_size=32,
+                lr=1e-3,
+                random_state=cfg.random_state
+            )
+            
+            # Fit the model
+            mphnn_model.fit(X_raw_win_all[train_mask], y_tr, 
+                           wavelengths=selected_wl,
+                           batch_labels=train_batch_labels,
+                           temperatures=train_temperatures)
+            
+            # Make predictions
+            y_pred = mphnn_model.predict(X_raw_win_all[test_mask], test_temperatures)
+            
+            # Add results
+            rows.append({
+                "protocol": "LOBO",
+                "held_out": held,
+                "model": "MPHNN",
+                "rmse": float(np.sqrt(np.mean((y_pred - y_te) ** 2))),
+                "mae": float(mean_absolute_error(y_te, y_pred)),
+                "r2": float(r2_score(y_te, y_pred)),
+            })
+            
+            # Add predictions
+            for idx_pos, idx in enumerate(test_indices):
+                pred_rows.append({
+                    "protocol": "LOBO",
+                    "held_out": str(held),
+                    "model": "MPHNN",
+                    "sample_index": int(idx),
+                    "y_true": float(y_te[idx_pos]),
+                    "y_pred": float(y_pred[idx_pos]),
+                })
+        except Exception as e:
+            print(f"MPHNN LOBO failed: {e}")
+            pass
+        
+        # Ensemble model on LOBO
+        try:
+            if not (cfg.enable_ensemble and ENSEMBLE_AVAILABLE and (EnsembleModel is not None)):
+                raise RuntimeError("Ensemble model disabled or unavailable")
+            
+            # Create batch labels for domain adaptation
+            train_batch_strings = [dataset.batches[i] for i in np.nonzero(train_mask)[0]]
+            test_batch_strings = [dataset.batches[i] for i in np.nonzero(test_mask)[0]]
+            
+            # Create a mapping from string to integer
+            all_batches = list(set(dataset.batches))
+            batch_to_int = {batch: idx for idx, batch in enumerate(all_batches)}
+            
+            train_batch_labels = np.array([batch_to_int[batch] for batch in train_batch_strings])
+            test_batch_labels = np.array([batch_to_int[batch] for batch in test_batch_strings])
+            
+            # Create synthetic temperature data
+            train_temperatures = np.ones(len(y_tr)) * 22.0
+            test_temperatures = np.ones(len(y_te)) * 22.0
+            
+            # Create and train ensemble model
+            ensemble_model = create_ensemble_pipeline(
+                method="weighted_average",
+                use_pls=True,
+                use_svr=True,
+                use_mphnn=cfg.enable_mphnn,
+                random_state=cfg.random_state
+            )
+            
+            ensemble_model.fit(X_raw_win_all[train_mask], y_tr,
+                             wavelengths=selected_wl,
+                             batch_labels=train_batch_labels,
+                             temperatures=train_temperatures)
+            
+            # Make predictions
+            y_pred = ensemble_model.predict(X_raw_win_all[test_mask], test_temperatures)
+            
+            # Add results
+            rows.append({
+                "protocol": "LOBO",
+                "held_out": held,
+                "model": "ENSEMBLE",
+                "rmse": float(np.sqrt(np.mean((y_pred - y_te) ** 2))),
+                "mae": float(mean_absolute_error(y_te, y_pred)),
+                "r2": float(r2_score(y_te, y_pred)),
+            })
+            
+            # Add predictions
+            for idx_pos, idx in enumerate(test_indices):
+                pred_rows.append({
+                    "protocol": "LOBO",
+                    "held_out": str(held),
+                    "model": "ENSEMBLE",
+                    "sample_index": int(idx),
+                    "y_true": float(y_te[idx_pos]),
+                    "y_pred": float(y_pred[idx_pos]),
+                })
+            
+            print("✓ Ensemble LOBO completed successfully")
+            
+        except Exception as e:
+            print(f"Ensemble LOBO failed: {e}")
             pass
 
     return pd.DataFrame(rows), pls_hparams, pd.DataFrame(pred_rows), pinn_infos
