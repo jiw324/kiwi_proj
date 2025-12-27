@@ -105,8 +105,8 @@ def build_preprocess_pipeline(dataset: KiwiDataset, cfg: RunConfig) -> Tuple[Pip
     if cfg.use_savgol:
         steps.append(("savgol", SavitzkyGolayDerivative(window_length=cfg.savgol_window, polyorder=cfg.savgol_polyorder, deriv=1)))
     pipeline = Pipeline(steps)
-    # Fit minimal to configure window selection without learning global statistics
-    pipeline.fit(dataset.spectra[:2], dataset.targets[:2])
+    # Fit on full dataset to configure all transformers properly
+    pipeline.fit(dataset.spectra, dataset.targets)
     selected_wl = win.selected_wavelengths
     return pipeline, selected_wl
 
