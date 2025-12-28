@@ -92,10 +92,18 @@ def main():
         ax.set_xlabel("")
         ax.set_ylabel(metric.upper(), fontsize=12)
         ax.grid(axis='y', linestyle='--', alpha=0.4)
-        ax.legend(title="Protocol", fontsize=10)
+    
+    # Create a single legend for the entire figure (instead of per-subplot)
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, title="Protocol", fontsize=11, 
+               loc='upper center', bbox_to_anchor=(0.5, 0.98), ncol=2, frameon=True)
+    
+    # Remove individual subplot legends
+    for ax in axes:
+        ax.get_legend().remove()
     
     fig.suptitle("Dual-Strategy Performance: Enhanced CV vs Robust LOBO", 
-                 fontsize=16, fontweight='bold', y=1.02)
+                 fontsize=16, fontweight='bold', y=1.05)
     
     out_path = os.path.join(img_out_dir, "methods_performance.png")
     fig.savefig(out_path, dpi=300, bbox_inches='tight')
